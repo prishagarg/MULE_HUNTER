@@ -85,7 +85,7 @@ def generate_dataset():
         
     pd.DataFrame(edge_data).to_csv(os.path.join(OUTPUT_DIR, "transactions.csv"), index=False)
     
-    print(f"✅ SUCCESS! Data locked in shared-data.")
+    print(f"SUCCESS! Data locked in shared-data.")
 
 if __name__ == "__main__":
     generate_dataset()

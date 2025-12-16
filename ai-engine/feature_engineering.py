@@ -10,7 +10,7 @@ from torch_geometric.data import Data
 SHARED_DATA_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "shared-data")
 
 def build_graph_data():
-    print("🧠 Starting Feature Engineering & Data Enrichment...")
+    print("Starting Feature Engineering & Data Enrichment...")
     
     # 1. Load the raw data
     nodes_path = os.path.join(SHARED_DATA_DIR, "nodes.csv")
@@ -51,7 +51,6 @@ def build_graph_data():
         d_out = G.out_degree(node_id)
         
         # -- Feature B: Money Flow Metrics --
-        # FIX: Use data=True to get the dictionary attributes, preventing the AttributeError
         in_edges = G.in_edges(node_id, data=True)
         out_edges = G.out_edges(node_id, data=True)
         
@@ -100,7 +99,7 @@ def build_graph_data():
     data = Data(x=x, edge_index=edge_index, y=y)
     torch.save(data, os.path.join(SHARED_DATA_DIR, "processed_graph.pt"))
     
-    print("✅ SUCCESS! Feature engineering and data enrichment complete.")
+    print(" SUCCESS! Feature engineering and data enrichment complete.")
 
 if __name__ == "__main__":
     build_graph_data()

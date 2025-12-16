@@ -5,12 +5,12 @@ import torch.nn.functional as F
 from torch_geometric.nn import SAGEConv
 import os
 
-# --- CONFIG ---
+#CONFIG
 SHARED_DATA_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "shared-data")
 MODEL_PATH = os.path.join(SHARED_DATA_DIR, "mule_model.pth")
 DATA_PATH = os.path.join(SHARED_DATA_DIR, "processed_graph.pt")
 
-# --- DEFINING THE BRAIN ARCHITECTURE ---
+# DEFINING THE BRAIN ARCHITECTURE 
 # We must redefine the class so PyTorch knows what "MuleSAGE" means
 class MuleSAGE(torch.nn.Module):
     def __init__(self, in_channels, hidden_channels, out_channels):
@@ -24,7 +24,7 @@ class MuleSAGE(torch.nn.Module):
         x = self.conv2(x, edge_index)
         return F.log_softmax(x, dim=1)
 
-# --- INITIALIZING THE APP ---
+# INITIALIZING THE APP 
 app = FastAPI(title="Mule Hunter AI Engine")
 
 # Global variables to hold the brain in memory
@@ -48,7 +48,7 @@ def load_brain():
     model.load_state_dict(torch.load(MODEL_PATH, weights_only=True))
     model.eval() # Set to "Evaluation Mode" (No learning, just predicting)
     
-    print("✅ Brain is active and listening on Port 8000.")
+    print(" Brain is active and listening on Port 8000.")
 
 @app.get("/")
 def health_check():
