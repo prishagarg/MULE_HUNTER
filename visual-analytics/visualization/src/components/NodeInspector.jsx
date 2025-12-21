@@ -4,11 +4,12 @@ export default function NodeInspector({ node, explanations, onClose }) {
   const [aiText, setAiText] = useState(null);
   const [loading, setLoading] = useState(false);
   const [closing, setClosing] = useState(false);
+  const [activeSlide, setActiveSlide] = useState("shap");
 
   if (!node) return null;
   console.log("Selected Node:", node);
   const isAnomalous = node.is_anomalous === 1;
-  const reasons = explanations?.[node.id] || [];
+  const reasons = explanations?.[String(node.id)]?.reasons || [];
 
   const generateAIExplanation = async () => {
     setLoading(true);
@@ -21,6 +22,60 @@ to anomalous accounts. Rapid inflow and outflow patterns indicate potential mule
       setLoading(false);
     }, 1200);
   };
+  function ShapSlide({ reasons, isAnomalous }) {
+    if (!reasons.length) {
+      return (
+        <p className="text-xs text-gray-500 italic">
+          No strong SHAP signals for this account.
+        </p>
+      );
+    }
+
+    return (
+      <ul className="space-y-2">
+        {reasons.map((reason, i) => (
+          <li
+            key={i}
+            className={`flex gap-2 items-start p-2 rounded-md text-sm
+            ${
+              isAnomalous
+                ? "bg-red-950/40 text-red-200"
+                : "bg-green-950/40 text-green-200"
+            }`}
+          >
+            <span className="mt-0.5">▸</span>
+            <span>{reason}</span>
+          </li>
+        ))}
+      </ul>
+    );
+  }
+  function AISlide({ aiText, loading, onGenerate }) {
+    return (
+      <>
+        <div className="min-h-20 mb-3">
+          {aiText ? (
+            <div className="bg-zinc-800 p-3 rounded-md text-sm text-gray-200">
+              {aiText}
+            </div>
+          ) : (
+            <p className="text-xs text-gray-500 italic">
+              Generate a natural language explanation based on model signals.
+            </p>
+          )}
+        </div>
+
+        <button
+          onClick={onGenerate}
+          disabled={loading}
+          className="w-full rounded-md bg-white text-black py-2 text-sm font-medium hover:bg-gray-200"
+        >
+          {loading ? "Generating..." : "Generate AI Summary"}
+        </button>
+      </>
+    );
+  }
+
   const handleClose = () => {
     setClosing(true);
 
@@ -81,32 +136,46 @@ to anomalous accounts. Rapid inflow and outflow patterns indicate potential mule
       </Section>
 
       {/* Explainability */}
-      <Section title="AI Explainability">
-        <p className="text-sm text-gray-400 mb-3">
-          Why was this account flagged?
-        </p>
+      <Section title="Explainability">
+        {/* Tabs */}
+        <div className="flex mb-4 rounded-md overflow-hidden border border-zinc-700">
+          <button
+            onClick={() => setActiveSlide("shap")}
+            className={`flex-1 py-2 text-sm font-medium
+        ${
+          activeSlide === "shap"
+            ? "bg-zinc-800 text-white"
+            : "bg-zinc-900 text-gray-400 hover:text-white"
+        }`}
+          >
+            SHAP Explainability
+          </button>
 
-        {reasons.length > 0 && (
-          <ul className="mb-3 list-disc pl-4 text-sm text-gray-300 space-y-1">
-            {reasons.map((r, i) => (
-              <li key={i}>{r}</li>
-            ))}
-          </ul>
-        )}
+          <button
+            onClick={() => setActiveSlide("ai")}
+            className={`flex-1 py-2 text-sm font-medium
+        ${
+          activeSlide === "ai"
+            ? "bg-zinc-800 text-white"
+            : "bg-zinc-900 text-gray-400 hover:text-white"
+        }`}
+          >
+            AI Explanation
+          </button>
+        </div>
 
-        {aiText && (
-          <div className="bg-zinc-800 p-3 rounded-md text-sm text-gray-200 mb-3">
-            {aiText}
-          </div>
-        )}
-
-        <button
-          onClick={generateAIExplanation}
-          disabled={loading}
-          className="w-full rounded-md bg-white text-black py-2 text-sm font-medium hover:bg-gray-200"
-        >
-          {loading ? "Generating..." : "Generate AI Summary"}
-        </button>
+        {/* Slide Content */}
+        <div className="min-h-[140px] transition-all">
+          {activeSlide === "shap" ? (
+            <ShapSlide reasons={reasons} isAnomalous={isAnomalous} />
+          ) : (
+            <AISlide
+              aiText={aiText}
+              loading={loading}
+              onGenerate={generateAIExplanation}
+            />
+          )}
+        </div>
       </Section>
 
       {/* Actions */}
