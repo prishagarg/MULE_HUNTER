@@ -15,8 +15,14 @@ export default function FraudGraph3D({
 
   useEffect(() => {
     fetch("/nodes_viz.json")
-      .then((res) => res.json())
-      .then((data) => setRawGraph(data));
+      .then((res) => {
+        if (!res.ok) {
+          throw new Error(`HTTP error! status: ${res.status}`);
+        }
+        return res.json();
+      })
+      .then((data) => setRawGraph(data))
+      .catch((err) => console.error("Could not load graph data:", err));
   }, []);
 
   const visibleGraph = useMemo(() => {
