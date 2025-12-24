@@ -2,53 +2,51 @@ package com.mulehunter.backend.DTO;
 
 public class AnomalyScoreDTO {
 
-  private Long node_id;
-  private Double anomaly_score;
-  private Integer is_anomalous;
-  private String model;
-  private String source;
+    private Long nodeId;
+    private double anomalyScore;
+    private int isAnomalous;
+    private String model;
+    private String source;
 
-  // -------- getters --------
+    public AnomalyScoreDTO() {}
 
-  public Long getNode_id() {
-    return node_id;
-  }
+    public Long getNodeId() {
+        return nodeId;
+    }
 
-  public Double getAnomaly_score() {
-    return anomaly_score;
-  }
+    public void setNodeId(Long nodeId) {
+        this.nodeId = nodeId;
+    }
 
-  public Integer getIs_anomalous() {
-    return is_anomalous;
-  }
+    public double getAnomalyScore() {
+        return anomalyScore;
+    }
 
-  public String getModel() {
-    return model;
-  }
+    public void setAnomalyScore(double anomalyScore) {
+        this.anomalyScore = anomalyScore;
+    }
 
-  public String getSource() {
-    return source;
-  }
+    public int getIsAnomalous() {
+        return isAnomalous;
+    }
 
-  // -------- setters --------
+    public void setIsAnomalous(int isAnomalous) {
+        this.isAnomalous = isAnomalous;
+    }
 
-  public void setNode_id(Long node_id) {
-    this.node_id = node_id;
-  }
+    public String getModel() {
+        return model;
+    }
 
-  public void setAnomaly_score(Double anomaly_score) {
-    this.anomaly_score = anomaly_score;
-  }
+    public void setModel(String model) {
+        this.model = model;
+    }
 
-  public void setIs_anomalous(Integer is_anomalous) {
-    this.is_anomalous = is_anomalous;
-  }
+    public String getSource() {
+        return source;
+    }
 
-  public void setModel(String model) {
-    this.model = model;
-  }
-
-  public void setSource(String source) {
-    this.source = source;
-  }
+    public void setSource(String source) {
+        this.source = source;
+    }
 }
