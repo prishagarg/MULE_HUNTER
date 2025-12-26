@@ -46,3 +46,20 @@ def attach_scores(
         nodes_scored.append(merged)
 
     return nodes_scored
+
+def score_single_node(enriched_node: Dict) -> float:
+    """
+    Scores ONE node.
+    Wrapper added for node-triggered ML pipeline.
+    """
+
+    # Import here to avoid circular imports
+    from app.services.anomaly_detection.eif_detector import run_isolation_forest
+
+    # EIF expects a list → wrap single node
+    scores = run_isolation_forest([enriched_node])
+
+    if not scores:
+        return 0.0
+
+    return scores[0].get("anomaly_score", 0.0)

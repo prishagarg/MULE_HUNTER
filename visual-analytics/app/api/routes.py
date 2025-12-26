@@ -1,28 +1,53 @@
 from fastapi import APIRouter, BackgroundTasks, Depends
+from pydantic import BaseModel
+from typing import List
 import asyncio
 
-from app.services.orchestrator import run_full_pipeline
 from app.core.security import verify_internal_api_key
+from app.services.node_pipeline import run_node_pipeline
 
 router = APIRouter()
 
 
-def _run_pipeline_sync():
-    """
-    Sync wrapper for async pipeline.
-    Safe to run inside BackgroundTasks.
-    """
-    asyncio.run(run_full_pipeline())
+# =========================
+# REQUEST MODELS
+# =========================
 
+class NodePayload(BaseModel):
+    nodeId: int
+    role: str
+
+
+class VisualReanalyzeRequest(BaseModel):
+    trigger: str
+    transactionId: str
+    nodes: List[NodePayload]
+
+
+# =========================
+# BACKGROUND RUNNER
+# =========================
+
+def _run_pipeline_sync(nodes: List[NodePayload]):
+    asyncio.run(run_node_pipeline(nodes))
+
+
+# =========================
+# NODE-BASED ENTRY POINT
+# =========================
 
 @router.post(
-    "/visual/reanalyze/all",
+    "/visual/reanalyze/nodes",
     dependencies=[Depends(verify_internal_api_key)]
 )
-def run_full_visual_analytics(background_tasks: BackgroundTasks):
-    background_tasks.add_task(_run_pipeline_sync)
+def reanalyze_nodes(
+    request: VisualReanalyzeRequest,
+    background_tasks: BackgroundTasks
+):
+    background_tasks.add_task(_run_pipeline_sync, request.nodes)
 
     return {
         "status": "started",
-        "message": "Visual analytics pipeline started successfully"
+        "transactionId": request.transactionId,
+        "nodes": [n.nodeId for n in request.nodes]
     }

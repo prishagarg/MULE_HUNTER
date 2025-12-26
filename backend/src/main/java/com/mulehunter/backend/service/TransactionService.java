@@ -7,23 +7,27 @@ import com.mulehunter.backend.model.TransactionRequest;
 import com.mulehunter.backend.repository.TransactionRepository;
 import com.fasterxml.jackson.databind.JsonNode;
 import reactor.core.publisher.Mono;
+
+import java.time.Instant;
+import java.util.List;
 import java.util.Map;
 
 /**
  * Service responsible for processing financial transactions.
- * It orchestrates the flow between the Database, Node Analytics, and the AI Fraud Engine.
+ * It orchestrates the flow between the Database, Node Analytics, and the AI
+ * Fraud Engine.
  */
 @Service
 public class TransactionService {
 
     private final TransactionRepository repository;
     private final NodeEnrichedService nodeEnrichedService;
-    private final WebClient webClient; 
+    private final WebClient webClient;
 
     public TransactionService(TransactionRepository repository, NodeEnrichedService nodeEnrichedService) {
         this.repository = repository;
         this.nodeEnrichedService = nodeEnrichedService;
-        
+
         // Initialize connection to the AI Engine
         this.webClient = WebClient.builder()
                 .baseUrl("http://host.docker.internal:8000")
@@ -38,49 +42,47 @@ public class TransactionService {
 
         // 1. Save Initial "Ground Truth"
         return repository.save(tx)
-                .flatMap(savedTx -> 
-                    // 2. Update Graph Analytics
-                    Mono.when(
+                .flatMap(savedTx ->
+                // 2. Update Graph Analytics
+                Mono.when(
                         nodeEnrichedService.handleOutgoing(sourceNodeId, amount),
-                        nodeEnrichedService.handleIncoming(targetNodeId, amount)
-                    )
-                    // 3. Call AI Model
-                    .then(callAiModel(sourceNodeId, targetNodeId, amount))
-                    .flatMap(aiResponse -> {
-                        // 4. Process AI Verdict
-                        if (aiResponse != null && aiResponse.has("risk_score")) {
-                            double riskScore = aiResponse.get("risk_score").asDouble();
-                            String verdict = aiResponse.get("verdict").asText();
-                            
-                            System.out.println("🤖 AI ORCHESTRATOR :: Transaction ID " + savedTx.getId() + 
-                                             " | Risk Score: " + riskScore + " | Verdict: " + verdict);
-                            
-                            //Save the Score and Verdict to the Database object
-                            savedTx.setRiskScore(riskScore);
-                            savedTx.setVerdict(verdict);
+                        nodeEnrichedService.handleIncoming(targetNodeId, amount))
+                        // 3. Call AI Model
+                        .then(callAiModel(sourceNodeId, targetNodeId, amount))
+                        .flatMap(aiResponse -> {
+                            triggerVisualMlPipeline(savedTx).subscribe();
+                            // 4. Process AI Verdict
+                            if (aiResponse != null && aiResponse.has("risk_score")) {
+                                double riskScore = aiResponse.get("risk_score").asDouble();
+                                String verdict = aiResponse.get("verdict").asText();
 
-                            // Flag as fraud if score is high
-                            if (riskScore > 0.5) {
-                                savedTx.setSuspectedFraud(true);
-                            } else {
-                                savedTx.setSuspectedFraud(false);
+                                System.out.println("🤖 AI ORCHESTRATOR :: Transaction ID " + savedTx.getId() +
+                                        " | Risk Score: " + riskScore + " | Verdict: " + verdict);
+
+                                // Save the Score and Verdict to the Database object
+                                savedTx.setRiskScore(riskScore);
+                                savedTx.setVerdict(verdict);
+
+                                // Flag as fraud if score is high
+                                if (riskScore > 0.5) {
+                                    savedTx.setSuspectedFraud(true);
+                                } else {
+                                    savedTx.setSuspectedFraud(false);
+                                }
+
+                                // Save the updated object back to the DB
+                                return repository.save(savedTx);
                             }
-
-                            // Save the updated object back to the DB
-                            return repository.save(savedTx);
-                        }
-                        return Mono.just(savedTx);
-                    })
-                );
+                            return Mono.just(savedTx);
+                        }));
     }
 
     private Mono<JsonNode> callAiModel(Long source, Long target, double amount) {
         Map<String, Object> aiPayload = Map.of(
-            "source_id", source,
-            "target_id", target,
-            "amount", amount,
-            "timestamp", "2025-12-25"
-        );
+                "source_id", source,
+                "target_id", target,
+                "amount", amount,
+                "timestamp", Instant.now().toString());
 
         return webClient.post()
                 .uri("/analyze-transaction")
@@ -89,7 +91,29 @@ public class TransactionService {
                 .bodyToMono(JsonNode.class)
                 .onErrorResume(e -> {
                     System.err.println("AI SERVICE CONNECTION FAILED: " + e.getMessage());
-                    return Mono.empty(); 
+                    return Mono.empty();
                 });
     }
+
+    private Mono<Void> triggerVisualMlPipeline(Transaction tx) {
+
+        Map<String, Object> payload = Map.of(
+                "trigger", "TRANSACTION_EVENT",
+                "transactionId", tx.getId(),
+                "nodes", List.of(
+                        Map.of("nodeId", Long.parseLong(tx.getSourceAccount()), "role", "SOURCE"),
+                        Map.of("nodeId", Long.parseLong(tx.getTargetAccount()), "role", "TARGET")));
+
+        return webClient.post()
+                .uri("/visual/reanalyze/nodes")
+                .header("X-INTERNAL-API-KEY", "SECRET_KEY")
+                .bodyValue(payload)
+                .retrieve()
+                .bodyToMono(Void.class)
+                .onErrorResume(e -> {
+                    System.err.println("VISUAL ML PIPELINE TRIGGER FAILED: " + e.getMessage());
+                    return Mono.empty();
+                });
+    }
+
 }
