@@ -5,8 +5,9 @@ import Footer from "../components/Footer";
 
 //  Card Components
 import VisualAnalyticsCard from "../components/VisualAnalyticsCard";
-// import JA3Card from "../components/cards/JA3Card";
-// import SupervisedCard from "../components/cards/SupervisedCard";
+// import JA3Card from "../components/JA3Card";
+// import SupervisedCard from "../components/SupervisedCard";
+import Navbar from "../components/Navbar";
 
 type ActiveTab = "unsupervised" | "ja3" | "supervised";
 
@@ -35,9 +36,7 @@ export default function FakeTransactionPage() {
     setForm({ ...form, [e.target.name]: e.target.value });
   };
 
-  // ======================================================
-  // SEND TRANSACTION + START VISUAL-ANALYTICS
-  // ======================================================
+  
   const sendTransaction = async () => {
     setLoading(true);
 
@@ -48,7 +47,7 @@ export default function FakeTransactionPage() {
     };
 
     try {
-      // 1️⃣ Trigger transaction (AI-Analytics pipeline)
+      // 1️⃣ Trigger transaction 
       const txResponse = await fetch("http://localhost:8080/api/transactions", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -58,14 +57,31 @@ export default function FakeTransactionPage() {
       if (!txResponse.ok) throw new Error("Transaction Failed");
 
     
-      const data = await txResponse.json();
+     let data: any = null;
+
+    const contentType = txResponse.headers.get("content-type");
+
+    if (contentType && contentType.includes("application/json")) {
+      data = await txResponse.json();
+    } else {
+      console.warn("No JSON body returned from /transactions");
+    }
+     
+    if (data) {
       setResult({
-        risk_score: data.riskScore || 0,
-        reasons: [data.verdict || "Processed by AI Engine"],
+        risk_score: data.riskScore ?? null,
+        reasons: [data.verdict ?? "Transaction stored"],
       });
+    } else {
+      setResult({
+        risk_score: null,
+        reasons: ["Transaction accepted"],
+      });
+    }
+
 
      
-      //  START VISUAL-ANALYTICS (EIF + SHAP)
+      
       
       setVaEvents([]);
       setVaStatus("running");
@@ -102,6 +118,7 @@ export default function FakeTransactionPage() {
 
   return (
     <div className="flex flex-col h-screen bg-black text-white">
+      <Navbar/>
       {/* ================= MAIN ================= */}
       <main className="flex-1 overflow-hidden p-6 lg:p-8">
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 h-full">

@@ -52,7 +52,7 @@ public class TransactionService {
                         nodeEnrichedService.handleOutgoing(sourceNodeId, amount),
                         nodeEnrichedService.handleIncoming(targetNodeId, amount))
                         // 3. Call AI Model
-                        .then(callAiModel(sourceNodeId, targetNodeId, amount))
+                        .then(callAiModel(sourceNodeId, targetNodeId, amount)).defaultIfEmpty(null)
                         .flatMap(aiResponse -> triggerVisualMlPipeline(savedTx)
                                 .then(processAiResponse(savedTx, aiResponse))));
 
