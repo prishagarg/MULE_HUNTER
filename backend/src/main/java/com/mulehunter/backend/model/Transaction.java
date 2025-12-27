@@ -18,21 +18,27 @@ public class Transaction {
 
     @Field(targetType = FieldType.DECIMAL128)
     private BigDecimal amount;
-    
+
     private boolean suspectedFraud;
 
-    private Double riskScore; 
+    private Double riskScore;
     private String verdict;
 
-    public Transaction() {}
+    public Transaction() {
+    }
 
     public static Transaction from(TransactionRequest request) {
         Transaction tx = new Transaction();
         tx.sourceAccount = request.getSourceAccount();
         tx.targetAccount = request.getTargetAccount();
-        tx.amount = request.getAmount();
+        if (request.getAmount() == null) {
+            tx.amount = BigDecimal.ZERO;
+        } else {
+            tx.amount = request.getAmount();
+        }
         tx.suspectedFraud = false;
-        // riskScore and verdict are null initially; we fill them after AI responds
+        tx.riskScore = 0.0;
+        tx.verdict = "PENDING";
         return tx;
     }
 

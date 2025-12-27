@@ -39,21 +39,51 @@ public class TransactionService {
     }
 
     public Mono<Transaction> createTransaction(TransactionRequest request) {
+        System.out.println("🟢 TX RECEIVED :: " + request);
         Transaction tx = Transaction.from(request);
-        Long sourceNodeId = Long.parseLong(tx.getSourceAccount());
-        Long targetNodeId = Long.parseLong(tx.getTargetAccount());
+        Long sourceNodeId;
+        Long targetNodeId;
+        try {
+            sourceNodeId = Long.parseLong(tx.getSourceAccount());
+            targetNodeId = Long.parseLong(tx.getTargetAccount());
+        } catch (Exception e) {
+            System.err.println("❌ NODE ID PARSE FAILED");
+            e.printStackTrace();
+            return Mono.error(e);
+        }
         double amount = tx.getAmount().doubleValue();
 
         // 1. Save Initial "Ground Truth"
         return repository.save(tx)
+                .doOnSubscribe(s -> System.out.println("Saving transacation..."))
+                .doOnSuccess(saved -> System.out.println("Transaction saved with ID:" + saved.getId()))
+                .doOnError(e -> {
+                    System.out.println("Transaction Save Failed");
+                    e.printStackTrace();
+                })
                 .flatMap(savedTx ->
                 // 2. Update Graph Analytics
                 Mono.when(
-                        nodeEnrichedService.handleOutgoing(sourceNodeId, amount),
-                        nodeEnrichedService.handleIncoming(targetNodeId, amount))
+                        nodeEnrichedService.handleOutgoing(sourceNodeId, amount).doOnError(e -> {
+                            System.out.println("Handle Outgoing Failed");
+                            e.printStackTrace();
+                        }),
+                        nodeEnrichedService.handleIncoming(targetNodeId, amount).doOnError(e -> {
+                            System.out.println("Handle Incoming Failed");
+                            e.printStackTrace();
+                        }))
                         // 3. Call AI Model
-                        .then(callAiModel(sourceNodeId, targetNodeId, amount)).defaultIfEmpty(null)
+                        .then(callAiModel(sourceNodeId, targetNodeId, amount)
+                                .doOnSubscribe(s -> System.out.println("Calling AI Engine")))
+                        .doOnError(e -> {
+                            System.out.println("AI Model Call Failed");
+                            e.printStackTrace();
+                        }).defaultIfEmpty(null)
                         .flatMap(aiResponse -> triggerVisualMlPipeline(savedTx)
+                                .doOnSubscribe(s -> System.out.println("Triggering Visual ML")).doOnError(e -> {
+                                    System.out.println("VISUAL ML TRIGGER FAILED");
+                                    e.printStackTrace();
+                                })
                                 .then(processAiResponse(savedTx, aiResponse))));
 
     }
@@ -98,7 +128,7 @@ public class TransactionService {
     }
 
     private Mono<Transaction> processAiResponse(Transaction tx, JsonNode aiResponse) {
-
+        System.out.println(" AI RESPONSE RECEIVED: " + aiResponse);
         if (aiResponse != null && aiResponse.has("risk_score")) {
 
             double riskScore = aiResponse.get("risk_score").asDouble();
@@ -113,9 +143,14 @@ public class TransactionService {
             tx.setVerdict(verdict);
             tx.setSuspectedFraud(riskScore > 0.5);
 
-            return repository.save(tx);
+            return repository.save(tx)
+                    .doOnSuccess(t -> System.out.println(" AI RESULT SAVED"))
+                    .doOnError(e -> {
+                        System.err.println(" FAILED TO SAVE AI RESULT");
+                        e.printStackTrace();
+                    });
         }
-
+        System.out.println("No AI result, returning base transaction");
         return Mono.just(tx);
     }
 
