@@ -123,18 +123,15 @@ app = FastAPI(title="Mule Hunter AI", lifespan=lifespan)
 # =================================================
 @app.get("/health")
 def health():
-    model_path = "shared-data/mule_model.pth"
-    graph_path = "shared-data/processed_graph.pt"
+    model_exists = os.path.exists(MODEL_PATH)
+    graph_exists = os.path.exists(GRAPH_PATH)
 
-    model_exists = os.path.exists(model_path)
-    graph_exists = os.path.exists(graph_path)
-
-    if model_exists and graph_exists:
+    if model_exists and graph_exists and _initialized:
         return {
-            "status": "READY",
+            "status": "HEALTHY",   # ✅ matches frontend
             "model_loaded": True,
-            "nodes_count": data.num_nodes if data else 0,
-            "version": "v1"
+            "nodes_count": base_graph.num_nodes if base_graph else 0,
+            "version": "Kaggle-V4-Final-Inductive"
         }
 
     return {
@@ -143,6 +140,7 @@ def health():
         "nodes_count": 0,
         "version": "Unknown"
     }
+
 
 
 # =================================================
