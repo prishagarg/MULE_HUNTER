@@ -38,5 +38,5 @@ jobs:
             EOF
             # docker-compose down
             # docker-compose up -d --build 
-            docker-compose up -d --build --no-deps backend
+            docker-compose up -d --build  --force-recreate --no-deps backend
             docker image prune -f
