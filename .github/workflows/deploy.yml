@@ -3,10 +3,6 @@ name: Deploy Control Tower
 on:
   push:
     branches: ["main"]
-    paths:
-      - "control-tower/**"
-      - "docker-compose.yml"
-      - ".github/workflows/deploy.yml"
 
 jobs:
   build-and-push:
