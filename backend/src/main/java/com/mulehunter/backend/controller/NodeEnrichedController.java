@@ -12,8 +12,8 @@ import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 
 @RestController
-@RequestMapping("")
-public class NodeEnrichedController {/backend/api/nodes/enriched
+@RequestMapping("/backend/api/nodes/enriched")
+public class NodeEnrichedController {
 
     private final NodeEnrichedRepository repository;
 
