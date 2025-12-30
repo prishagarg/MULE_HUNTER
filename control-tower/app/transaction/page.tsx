@@ -136,9 +136,13 @@ export default function FakeTransactionPage() {
       setActiveTab("unsupervised"); 
 
       const es = new EventSource(
+
          "http://13.60.91.248:8082/api/visual/stream/unsupervised" +
   `?transactionId=${transactionId}&nodeId=${form.source}`
+
+        
       );
+
 
       const handleEvent = (event: MessageEvent) => {
         const parsed = JSON.parse(event.data);
