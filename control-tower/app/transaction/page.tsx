@@ -21,10 +21,12 @@ interface AISystemStatus {
   version: string;
 }
 
+
 export default function FakeTransactionPage() {
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState<any>(null);
   const completedRef = useRef(false);
+const esRef = useRef<EventSource | null>(null);
 
   const [vaEvents, setVaEvents] = useState<any[]>([]);
   const [vaStatus, setVaStatus] =
@@ -80,6 +82,7 @@ export default function FakeTransactionPage() {
     setForm({ ...form, [e.target.name]: e.target.value });
   };
 
+  /* ================= TRANSACTION ================= */
   const sendTransaction = async () => {
     if (!form.source || !form.target || !form.amount) {
       alert("Source, Target and Amount are required");
@@ -90,6 +93,7 @@ export default function FakeTransactionPage() {
     setResult(null);
     setVaEvents([]);
     setVaStatus("idle");
+      completedRef.current = false;
 
     const transactionData = {
       sourceAccount: form.source,
@@ -155,7 +159,7 @@ const es = new EventSource(
   `${BACKEND_BASE_URL}/api/visual/stream/unsupervised` +
   `?transactionId=${transactionId}&nodeId=${form.source}`
 );
-
+esRef.current = es;
 // 1️⃣ Catch ALL unnamed events (most important)
 es.onmessage = (event) => {
   const data = JSON.parse(event.data);
@@ -232,6 +236,15 @@ es.onerror = (e) => {
       setLoading(false);
     }
   };
+  useEffect(() => {
+  return () => {
+    if (esRef.current) {
+      esRef.current.close();
+      esRef.current = null;
+    }
+  };
+}, []);
+
 
   return (
     <div className="flex flex-col min-h-screen bg-black text-white">
