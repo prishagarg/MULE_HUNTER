@@ -149,51 +149,67 @@ export default function FakeTransactionPage() {
       setVaStatus("running");
       setActiveTab("unsupervised"); 
 
-      const es = new EventSource(
-        `${BACKEND_BASE_URL}/api/visual/stream/unsupervised` +
-        `?transactionId=${transactionId}&nodeId=${form.source}`
-      );
+      // ================= SSE =================
+const es = new EventSource(
+  `${BACKEND_BASE_URL}/api/visual/stream/unsupervised` +
+  `?transactionId=${transactionId}&nodeId=${form.source}`
+);
+
+// 1️⃣ Catch ALL unnamed events (most important)
+es.onmessage = (event) => {
+  console.log("🟡 SSE message:", event.data);
+
+  try {
+    const parsed = JSON.parse(event.data);
+    setVaEvents(prev => [...prev, {
+      stage: "message",
+      data: parsed
+    }]);
+  } catch {
+    console.error("❌ Invalid SSE payload:", event.data);
+  }
+};
+
+// 2️⃣ Catch named events
+const handleEvent = (event: MessageEvent) => {
+  console.log(`🟢 SSE event [${event.type}]`, event.data);
+
+  try {
+    const parsed = JSON.parse(event.data);
+    setVaEvents(prev => [...prev, {
+      stage: event.type,
+      data: parsed
+    }]);
+  } catch {
+    console.error("❌ Invalid SSE payload:", event.data);
+  }
+};
+
+[
+  "population_loaded",
+  "scoring_started",
+  "eif_result",
+  "shap_started",
+  "shap_completed",
+  "shap_skipped",
+  "unsupervised_completed",
+  "unsupervised_failed",
+].forEach(stage => {
+  es.addEventListener(stage, handleEvent);
+});
+
+// 3️⃣ DO NOT CLOSE ON ERROR (critical)
+es.onerror = (e) => {
+  console.error("🔴 SSE ERROR", e);
+  setVaStatus(prev => prev === "done" ? "done" : "failed");
+};
 
 
 
 
-      const handleEvent = (event: MessageEvent) => {
-        const parsed = JSON.parse(event.data);
-        setVaEvents(prev => [...prev, {
-          stage: event.type,
-          data: parsed
-        }]);
-      };
 
-      [
-        "population_loaded",
-        "scoring_started",
-        "eif_result",
-        "shap_started",
-        "shap_completed",
-        "shap_skipped",
-      ].forEach(stage => {
-        es.addEventListener(stage, handleEvent);
-      });
-
-      es.addEventListener("unsupervised_completed", (event) => {
-        const parsed = JSON.parse(event.data);
-        setVaEvents(prev => [...prev, {
-          stage: "unsupervised_completed",
-          data: parsed
-        }]);
-
-        setVaStatus("done");   
-        es.close();
-      });
-
-      es.onerror = () => {
-        console.error("Visual Analytics SSE connection closed");
-        setVaStatus(prev =>
-          prev === "done" ? "done" : "failed"
-        );
-        es.close();
-      };
+      
+      
 
     } catch (err) {
       console.error(err);
