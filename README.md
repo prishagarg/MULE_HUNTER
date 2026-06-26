@@ -11,7 +11,7 @@
 
 **Access the deployed application here:**
 
-**[http://34.230.243.158:3000/](http://34.230.243.158:3000/)**
+**[https://mule-hunter.vercel.app/](https://mule-hunter.vercel.app/)**
 
 ## 🔐 Admin Panel Credentials
 
